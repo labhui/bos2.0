@@ -50,9 +50,38 @@
 			function doSearch(){
 				$('#searchWindow').window("open");
 			}
-			
+			//关联客户窗口弹出
 			function doAssociations(){
-				$('#customerWindow').window('open');
+				var rows=$("#grid").datagrid('getSelections');
+				if(rows.length==1){
+					
+					$("#customerFixedAreaId").val(rows[0].id);
+					$.messager.progress(
+						{
+							interval:500  //每0.5s加载10%，5s加载完
+						});
+					//发ajax请求，获得未关联客户
+					$.post("../../fixedArea_findNoAssociationCustomers.action",function(data){
+						$("#noassociationSelect").empty();
+						$(data).each(function(){
+							var option=$("<option value='"+this.id+"'>"+this.username+"("+this.address+")</option>");
+							$("#noassociationSelect").append(option);
+						});
+					});
+					$.post("../../fixedArea_findHasAssociationCustomers.action",{"id":rows[0].id},function(data){
+						$("#associationSelect").empty();
+						$(data).each(function(){
+							var option=$("<option value='"+this.id+"'>"+this.username+"("+this.address+")</option>");
+							$("#associationSelect").append(option);
+						});
+					$.messager.progress('close');
+					//加载完后弹出窗口
+					$('#customerWindow').window('open');
+					});
+				}else{
+					$.messager.alert('警告','定区关联客户必须(只能)选择一个定区','warning');
+				}
+				
 			}
 			
 			//工具栏
@@ -92,6 +121,8 @@
 						// 只选择了一个定区
 						// 弹出定区关联快递员 窗口 
 						$("#courierWindow").window('open');
+						//保存选中定区id到表单隐藏域
+						$("#courierFixedAreaId").val(rows[0].id);
 					}else{
 						// 没有选中定区，或者选择 了多个定区
 						$.messager.alert("警告","关联快递员,只能（必须）选择一个定区","warning");
@@ -189,6 +220,27 @@
 					
 				});
 				
+				$("#toRight").click(function(){
+					$("#associationSelect").append($("#noassociationSelect option:selected"));
+				});
+				
+				$("#toLeft").click(function(){
+					$("#noassociationSelect").append($("#associationSelect option:selected"));
+				});
+				
+				$("#associationBtn").click(function(){
+					//选中所有已关联客户的选项
+					$("#associationSelect option").attr("selected","selected");
+					$("#customerForm").submit();
+				});
+				
+				$("#associationCourierBtn").click(function(){
+					if($("#courierForm").form('validate')){
+						$("#courierForm").submit();
+					}else{
+						$.messager.alert("警告","表单中存在非法数据","warning");
+					}
+				});
 			});
 		
 			function doDblClickRow(){
@@ -330,9 +382,29 @@
 						<tr>
 							<td>定区名称</td>
 							<td>
-								<input type="text" name="name" class="easyui-validatebox" required="true" />
+								<input type="text" name="fixedAreaName" class="easyui-validatebox" required="true" />
 							</td>
 						</tr>
+						<tr>
+							<td>负责人</td>
+							<td>
+								<input type="text" name="fixedAreaLeader" class="easyui-validatebox" required="true" />
+							</td>
+						</tr>
+						<tr>
+							<td>联系电话</td>
+							<td>
+								<input type="text" name="telephone" class="easyui-validatebox" required="true" />
+							</td>
+						</tr>
+						<tr>
+							<td>所属公司</td>
+							<td>
+								<input type="text" name="company" class="easyui-validatebox" required="true" />
+							</td>
+						</tr>
+						
+						<!-- 
 						<tr>
 							<td>选择负责人</td>
 							<td>
@@ -352,7 +424,8 @@
 									</thead>
 								</table>
 							</td>
-						</tr>
+						</tr> 
+						-->
 					</table>
 				</form>
 			</div>
@@ -392,9 +465,9 @@
 		</div>
 
 		<!-- 关联客户窗口 -->
-		<div class="easyui-window" title="关联客户窗口" id="customerWindow" collapsible="false" closed="true" minimizable="false" maximizable="false" style="top:20px;left:200px;width: 400px;height: 300px;">
+		<div class="easyui-window" title="关联客户窗口" id="customerWindow" collapsible="false" closed="true" minimizable="false" modal="true" maximizable="false" style="top:20px;left:200px;width: 400px;height: 300px;">
 			<div style="overflow:auto;padding:5px;" border="false">
-				<form id="customerForm" action="../../decidedzone_assigncustomerstodecidedzone.action" method="post">
+				<form id="customerForm" action="../../fixedArea_associationCustomersToFixedArea.action" method="post">
 					<table class="table-edit" width="80%" align="center">
 						<tr class="title">
 							<td colspan="3">关联客户</td>
@@ -436,13 +509,13 @@
 							<td>
 								<!-- 存放定区编号 -->
 								<input type="hidden" name="id" id="courierFixedAreaId" />
-								<input type="text" name="courierId" class="easyui-combobox" required="true" />
+								<input type="text" name="courierId" class="easyui-combobox" required="true" data-options="url:'../../courier_findnoassociation.action',valueField:'id',textField:'name'"/>
 							</td>
 						</tr>
 						<tr>
 							<td>选择收派时间</td>
 							<td>
-								<input type="text" name="takeTimeId" class="easyui-combobox" required="true" />
+								<input type="text" name="takeTimeId" class="easyui-combobox" required="true" data-options="url:'../../taketime_findAll.action',valueField:'id',textField:'name'"/>
 							</td>
 						</tr>
 						<tr>

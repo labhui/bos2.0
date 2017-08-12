@@ -105,6 +105,7 @@ public class FixedArea {
 		this.subareas = subareas;
 	}
 
+	@JSON(serialize=false)
 	public Set<Courier> getCouriers() {
 		return couriers;
 	}
